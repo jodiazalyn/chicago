@@ -294,7 +294,7 @@ export default function AssessmentEvaluate() {
             </p>
             <h3 className="font-semibold">SEC. 4904. (5)</h3>
             <p className="text-sm text-muted-foreground">
-              A Conviction that is more than seven years old, the date of Conviction being the date of sentencing, except that this restriction and any limitations imposed in this Article 49 based on the limitation in this subsection (a)(5) shall not apply where the applicant or employee is or will be (A) providing services to or have supervisory or disciplinary authority over a minor, (B) providing services to or have supervisory or disciplinary authority over a "dependent adult," as that phrase is defined in California Welfare and Institutions Code Section 15610.23 or any successor state law, or (C) providing support services or care to or has supervisory authority over a person 65 years or older;
+              A Conviction that is more than seven years old, the date of Conviction being the date of sentencing, except that this restriction and any limitations imposed in this Article 49 based on the limitation in this subsection (a)(5) shall not apply where the applicant or employee is or will be (A) providing services to or have supervisory or disciplinary authority over a minor, (B) providing services to or have supervisory or disciplinary authority over a "dependent adult," as that phrase is defined in Illinois Adult Protective Services Act or any successor state law, or (C) providing support services or care to or has supervisory authority over a person 65 years or older;
             </p>
           </div>
         );
@@ -402,7 +402,7 @@ export default function AssessmentEvaluate() {
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-            Pursuant to the San Francisco Fair Chance Ordinance, we consider for employment qualified applicants with arrest and conviction records.
+            Pursuant to the Cook County Human Rights Ordinance, we consider for employment qualified applicants with arrest and conviction records.
             </p>
           </div>
         );
@@ -418,7 +418,7 @@ export default function AssessmentEvaluate() {
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-            We are committed to fair hiring practices and fully adheres to the requirements set forth by the San Francisco Office of Labor Standards Enforcement (OLSE) under the Fair Chance Ordinance (FCO). This includes providing applicants with automated notice of their right to file a complaint with the OLSE if they believe we are not in compliance with the law.
+            We are committed to fair hiring practices and fully adheres to the requirements set forth by the Cook County Commission on Human Rights under the Human Rights Ordinance. This includes providing applicants with automated notice of their right to file a complaint with the Commission if they believe we are not in compliance with the law.
             </p>
           </div>
         );
@@ -595,20 +595,29 @@ export default function AssessmentEvaluate() {
             <li>Notify you that this conditional job offer has become final; or</li>
             <li>Notify you in writing that we intend to revoke (take back) this job offer because of your conviction history.</li>
           </ul>
-          <p>As required by California law, we will NOT consider any of the following information:</p>
-          <ul className="list-disc pl-5 space-y-2">
-            <li>Arrest not followed by conviction;</li>
-            <li>Referral to or participation in a pretrial or posttrial diversion program; or</li>
-            <li>Convictions that have been sealed, dismissed, expunged, or pardoned.</li>
-          </ul>
           <p>
-            As required by the California Fair Chance Act, we will consider whether your conviction history is directly related 
-            to the duties of the job we have offered you. We will consider all of the following:
+            Under Cook County law, employers cannot ask about or use the following criminal records in hiring decisions:
           </p>
           <ul className="list-disc pl-5 space-y-2">
-            <li>The nature and seriousness of the offense</li>
-            <li>The amount of time since the offense</li>
-            <li>The nature of the job</li>
+            <li>Arrests that did not lead to a conviction</li>
+            <li>Juvenile records</li>
+            <li>Sealed or expunged convictions</li>
+            <li>Old convictions unrelated to the job</li>
+          </ul>
+          <p>
+            As required by the Cook County Human Rights Ordinance, we will consider whether your conviction history is directly related 
+            to the duties of the job we have offered you. Before making any final decision, we will consider all of the following:
+          </p>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>The nature of your specific offense or offenses</li>
+            <li>The nature of your sentencing</li>
+            <li>The number of your convictions</li>
+            <li>The length of time that has passed since your most recent conviction</li>
+            <li>The relationship between your crimes and the nature of the relevant position</li>
+            <li>Your age at the time of the most recent conviction</li>
+            <li>Any evidence of rehabilitation, including, but not limited to, whether you have completed a treatment or counseling program</li>
+            <li>The extent to which you have been open, honest, and cooperative in the examination of your background</li>
+            <li>Any other information which the County of Cook deems relevant to your suitability for the position</li>
           </ul>
           <p>
             We will notify you in writing if we plan to revoke (take back) this job offer after reviewing your conviction history. 
@@ -855,22 +864,21 @@ export default function AssessmentEvaluate() {
           <div className="space-y-4">
             <p className="font-semibold">Your Right to File a Complaint:</p>
             <p>
-              If you believe your rights under the California Fair Chance Act have been violated during this job
-              application process, you have the right to file a complaint with the Civil Rights Department (CRD).
+              If you believe your rights under the Cook County Human Rights Ordinance have been violated during this job
+              application process, you have the right to file a complaint with the Cook County Commission on Human Rights.
             </p>
             <p>There are several ways to file a complaint:</p>
             <ul className="list-disc pl-5 space-y-2">
-              <li>File a complaint online at: ccrs.calcivilrights.ca.gov/s/</li>
+              <li>File a complaint online at: www.cookcountyil.gov/agency/commission-human-rights</li>
               <li>
-                Download an intake form at: calcivilrights.ca.gov/complaintprocess/filebymail/ and email it to
-                contact.center@calcivilrights.gov or mail it to 2218 Kausen Drive, Suite 100, Elk Grove, CA 95758.
+                Download an intake form at: https://ccchr.my.salesforce-sites.com/Forms/advpm__IntakeForm?formId=a0m8z000000SsC4AAK&formWidth=800px&hh=1 
               </li>
               <li>
-                Visit a CRD office. For office locations: calcivilrights.ca.gov/locations/
+                Visit the Cook County Commission on Human Rights office. For office locations: www.cookcountyil.gov/agency/commission-human-rights
               </li>
             </ul>
             <p>
-              For more information, visit calcivilrights.ca.gov/complaintprocess/ or call (800) 884-1684.
+              For more information, visit www.cookcountyil.gov/agency/commission-human-rights or call (312) 603-1100.
             </p>
           </div>
         </div>
@@ -1662,7 +1670,7 @@ export default function AssessmentEvaluate() {
           <DialogHeader>
             <DialogTitle>Conditional Offer Required</DialogTitle>
             <DialogDescription>
-              You must extend a conditional offer before accessing or considering conviction history. This is a requirement under San Francisco's Fair Chance Ordinance.
+              You must extend a conditional offer before accessing or considering conviction history. This is a requirement under Cook County's Human Rights Ordinance.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end">

@@ -169,7 +169,7 @@ export default function AssessmentIntake() {
                         1. Job Description
                       </Label>
                       <p className="ia-text text-gray35 mt-1">
-                        Attach the job posting or internal job description for this role. This will help determine whether the offense is job-related as required by San Francisco's Fair Chance Ordinance.
+                        Attach the job posting or internal job description for this role. This will help determine whether the offense is job-related as required by Cook County's Human Rights Ordinance.
                       </p>
                     </div>
                     <div className="grid gap-4">
@@ -311,7 +311,7 @@ export default function AssessmentIntake() {
               <DialogDescription className="space-y-6 pt-2 ia-text text-gray-700">
                 <div className="bg-muted p-4 rounded-lg border border-cinnabar">
                   <p>
-                    All materials have been ingested to power your real-time intelligence system. You're about to review <span className="font-bold text-foreground">Jacobi Iverson</span> for a Sales Associate role located in <span className="font-bold text-foreground">San Francisco, CA</span> that is governed by the <span className="font-bold text-foreground">San Francisco Fair Chance Ordinance</span>. We will walk you through an individualized assessment informed by your company policy, applicable laws, and background check data that has been ingested to create your hiring protocol and agentic workflows. Below you will find a summary of the background report and the job requisition you are looking to fill at your organization:
+                    All materials have been ingested to power your real-time intelligence system. You're about to review <span className="font-bold text-foreground">Jacobi Iverson</span> for a Sales Associate role located in <span className="font-bold text-foreground">Chicago, IL</span> that is governed by the <span className="font-bold text-foreground">Cook County Human Rights Ordinance</span>. We will walk you through an individualized assessment informed by your company policy, applicable laws, and background check data that has been ingested to create your hiring protocol and agentic workflows. Below you will find a summary of the background report and the job requisition you are looking to fill at your organization:
                   </p>
                 </div>
                 <Collapsible defaultOpen>

@@ -5,8 +5,8 @@ import { Inter } from 'next/font/google';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "Rézme's San Francisco Fair Chance Hiring Demo",
-  description: "Compliance framework for San Francisco's Fair Chance Ordinance",
+  title: "Rézme's Chicago Fair Chance Hiring Demo",
+  description: "Compliance framework for Cook County's Human Rights Ordinance",
 };
 
 export default function RootLayout({
