@@ -55,19 +55,24 @@ const legalFrameworks = [
 
 const steps = [
 	{
-		title: "Assessment",
-		description: "Evaluate conviction history in relation to job duties.",
+		title: "Conditional Offer",
+		description: "Extend conditional job offer before background check.",
+		icon: <FileText className="w-6 h-6" />,
+	},
+	{
+		title: "Validate Background Check",
+		description: "Review and validate background check findings.",
 		icon: <ClipboardList className="w-6 h-6" />,
 	},
 	{
-		title: "Candidate Response",
-		description: "Allow candidate to respond or provide evidence.",
+		title: "Individualized Assessment",
+		description: "Conduct individualized assessment of conviction history.",
 		icon: <User className="w-6 h-6" />,
 	},
 	{
-		title: "Reassessment",
-		description: "Review candidate input and reassess decision.",
-		icon: <AlertTriangle className="w-6 h-6" />,
+		title: "Team & Legal Review",
+		description: "Team collaboration and legal review process.",
+		icon: <Users className="w-6 h-6" />,
 	},
 	{
 		title: "Final Decision",

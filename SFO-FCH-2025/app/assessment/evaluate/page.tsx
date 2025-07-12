@@ -16,6 +16,7 @@ import { ArrowLeft, ArrowRight, Check, FileText, Info, Send, Edit } from "lucide
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Image from "next/image"; // Add this import for the logo
+import { Dialog as PreviewDialog, DialogContent as PreviewDialogContent, DialogHeader as PreviewDialogHeader, DialogTitle as PreviewDialogTitle } from "@/components/ui/dialog";
 
 interface Step {
   id: number;
@@ -67,6 +68,8 @@ export default function AssessmentEvaluate() {
     isOld: false,
     isJuvenile: false,
     isDecriminalized: false,
+    isDismissed: false,
+    isOlderThan5: false,
   });
 
   const [jobRelation, setJobRelation] = useState({
@@ -94,7 +97,9 @@ export default function AssessmentEvaluate() {
     timeSinceOffense: "",
     timeSinceSentence: "",
     jobDuties: "",
-    fitnessImpact: ""
+    fitnessImpact: "",
+    selectedExceptions: [] as string[],
+    exceptionExplanation: "",
   });
   const [isEditingNotice, setIsEditingNotice] = useState(false);
 
@@ -127,6 +132,53 @@ export default function AssessmentEvaluate() {
     backgroundCheck: { type: "backgroundCheck", file: null, notes: "" },
     restorativeRecord: { type: "restorativeRecord", file: null, notes: "" },
   });
+
+  const [showExceptionModal, setShowExceptionModal] = useState(false);
+  const [jobRelationException, setJobRelationException] = useState(false);
+  // Add state for selected exceptions:
+  const [selectedExceptions, setSelectedExceptions] = useState<string[]>([]);
+
+  const exceptionOptions = [
+    "Applicable law excludes applicants with certain criminal convictions from the relevant position.",
+    "A standard fidelity bond or an equivalent bond is required for the relevant position, and an applicant's conviction of one or more specified criminal offenses would disqualify the applicant from obtaining such a bond, in which case an employer may include a question or otherwise inquire whether the applicant has ever been convicted of any of those offenses.",
+    "There is a substantial relationship between one or more of the criminal offenses in the person's conviction record and the employment sought or held. 'Substantial relationship' means a consideration of whether the employment position offers the opportunity for the same or a similar offense to occur and whether the circumstances leading to the conduct for which the person was convicted will recur in the employment position.",
+    "The granting or continuation of the employment would involve an unreasonable risk to property or to the safety or welfare of specific individuals or the general public."
+  ];
+
+  // Add state for the iFrame modal in Evidence of Rehabilitation step
+  const [showNoEvidenceModal, setShowNoEvidenceModal] = useState(false);
+
+  // Add state for checkboxes in Direct Job-Relation Inquiry step
+  const [jobRelationSelections, setJobRelationSelections] = useState({ exception: false, related: false, unrelated: false });
+
+  const [showPreviewNotice, setShowPreviewNotice] = useState(false);
+
+  // Legal exceptions for disqualification (move to top of component)
+  const disqualifyingExceptions: string[] = [
+    "Applicable federal/state/local law excludes applicants with certain convictions",
+    "Fidelity or other equivalent bond is required",
+    "Substantial/direct relationship to the position (meaning a) the position offers an opportunity for similar crime to repeat or b) the convicted conduct will recur in the position)",
+    "Unreasonable risk to property/safety/welfare of an individual or general public",
+  ];
+
+  // Add to state:
+  const [timeElapsedAge, setTimeElapsedAge] = useState<string>("");
+
+  // Add to state:
+  const [taggedSupervisors, setTaggedSupervisors] = useState<string[]>([]);
+  const supervisorOptions = [
+    "cristina.williams@cityofchicago.org",
+    "deborah.anderson@cityofchicago.org",
+    "hallie.lovin@cityofchicago.org",
+    "jazmine.valadez@cityofchicago.org",
+    "joseph.mapp@cityofchicago.org",
+    "morrigan.sullivan@cityofchicago.org",
+  ];
+  const [supervisorInput, setSupervisorInput] = useState("");
+  const [showSupervisorDropdown, setShowSupervisorDropdown] = useState(false);
+
+  // Add to state:
+  const [showPreviewFinalNotice, setShowPreviewFinalNotice] = useState(false);
 
   useEffect(() => {
     setDocuments({
@@ -243,124 +295,116 @@ export default function AssessmentEvaluate() {
   const getLegalGuidance = () => {
     switch (currentStep) {
       case 1:
+        // Confirm Conditional Offer
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold">SEC. 4904 (c)</h3>
-            <p className="text-sm text-muted-foreground">
-              The Employer shall not require applicants or potential applicants for employment, or employees, to disclose, and shall not inquire into or discuss, their Conviction History or an Unresolved Arrest until after a conditional offer of employment. The Employer may not itself conduct or obtain from a third party a Background Check until after a conditional offer of employment.
-            </p>
+            <h3 className="font-semibold">Fair Chance Policy</h3>
+            <ul className="list-disc pl-5 text-sm">
+              <li>It is the policy of the City of Chicago to assure equal access to employment and protect civil rights for all persons, including those with a criminal history.</li>
+              <li>Employers may not inquire into or use arrest records as a basis to refuse to hire or take adverse action.</li>
+              <li>Employers may only consider conviction records under specific, legally defined circumstances.</li>
+            </ul>
+            <p className="text-xs text-muted-foreground">Reference: Chicago Human Rights Ordinance 6-10-010, 6-10-054</p>
+            <p className="text-xs text-muted-foreground mt-2">Source: <a href="https://www.chicago.gov/city/en/depts/cchr/supp_info/chicago_human_rights_ordinance.html" target="_blank" rel="noopener noreferrer" className="underline">Chicago Human Rights Ordinance</a></p>
           </div>
         );
       case 2:
+        // Validate Document Basis
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold">SEC. 4904 subsections (a)(1)-(7)</h3>
-            <p className="text-sm text-muted-foreground mb-2">
-              The FCO prohibits covered employers from ever considering the following:
-            </p>
-            <ul className="text-sm text-muted-foreground space-y-2">
-              <li>• An arrest not leading to a conviction, except for unresolved arrests</li>
-              <li>• Participation in a diversion or deferral of judgment program</li>
-              <li>• A conviction that has been dismissed, expunged, otherwise invalidated, or inoperative</li>
-              <li>• A conviction in the juvenile justice system</li>
-              <li>• An offense other than a felony or misdemeanor, such as an infraction</li>
-              <li>• A conviction that is more than 7 years old (unless the position being considered supervises minors or dependent adults)</li>
-              <li>• A conviction for decriminalized conduct, including the non-commercial use and cultivation of cannabis</li>
+            <h3 className="font-semibold">Arrest and Conviction Records</h3>
+            <ul className="list-disc pl-5 text-sm">
+              <li>Employers may not use arrest records (including juvenile records, expunged/sealed records, or arrests not leading to conviction) as a basis for employment decisions.</li>
+              <li>Conviction records may only be considered if one or more of the following exceptions apply:</li>
+              <ul className="list-disc pl-8 text-sm">
+                <li>Applicable law excludes applicants with certain convictions from the position.</li>
+                <li>A fidelity or equivalent bond is required and the conviction disqualifies the applicant from obtaining it.</li>
+                <li>There is a substantial relationship between the conviction and the job duties.</li>
+                <li>Employment would involve an unreasonable risk to property, safety, or welfare.</li>
             </ul>
+            </ul>
+            <p className="text-xs text-muted-foreground">Reference: 6-10-054(a)-(b)</p>
+            <p className="text-xs text-muted-foreground mt-2">Source: <a href="https://www.chicago.gov/city/en/depts/cchr/supp_info/chicago_human_rights_ordinance.html" target="_blank" rel="noopener noreferrer" className="underline">Chicago Human Rights Ordinance</a></p>
           </div>
         );
       case 3:
+        // Direct Job-Relation Inquiry
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold">Section 4093 Definitions</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Directly-Related Conviction in the employment context shall mean that the conduct for which a person was convicted or that is the subject of an Unresolved Arrest has a direct and specific negative bearing on that person's ability to perform the duties or responsibilities necessarily related to the employment position. In determining whether the conviction or Unresolved Arrest is directly related to the employment position, the Employer shall consider whether the employment position offers the opportunity for the same or a similar offense to occur and whether circumstances leading to the conduct for which the person was convicted or that is the subject of an Unresolved Arrest will recur in the employment position.
-            </p>
-            <h3 className="font-semibold">SEC. 4904 (f)</h3>
-            <p className="text-sm text-muted-foreground">
-              In making an employment decision based on an applicant's or employee's Conviction History, an Employer shall conduct an individualized assessment, considering only Directly-Related Convictions, the time that has elapsed since the Conviction or Unresolved Arrest, and any evidence of inaccuracy or Evidence of Rehabilitation or Other Mitigating Factors.
-            </p>
+            <h3 className="font-semibold">Direct Job-Relation & Legal Exceptions</h3>
+            <ul className="list-disc pl-5 text-sm">
+              <li>Employers may only consider a conviction record if there is a substantial or direct relationship to the position, or if employment would involve an unreasonable risk.</li>
+              <li><span className="font-semibold">Substantial relationship</span> means the job offers an opportunity for a similar offense to occur, or the circumstances leading to the conviction could recur in the position.</li>
+              <li>Employers must consider the nature and severity of the conviction, its relationship to safety and security, and the facts or circumstances surrounding the conviction.</li>
+            </ul>
+            <p className="text-xs text-muted-foreground">Reference: 6-10-054(b)-(c)</p>
+            <p className="text-xs text-muted-foreground mt-2">Source: <a href="https://www.chicago.gov/city/en/depts/cchr/supp_info/chicago_human_rights_ordinance.html" target="_blank" rel="noopener noreferrer" className="underline">Chicago Human Rights Ordinance</a></p>
           </div>
         );
       case 4:
+        // Time Elapsed Analysis
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold">Time Elapsed Restrictions</h3>
-            <p className="text-sm text-muted-foreground mb-2">
-              The Fair Chance Ordinance (FCO) prohibits covered employers from ever considering the following:
-            </p>
-            <p className="text-sm text-muted-foreground mb-4">
-              A conviction that is more than 7 years old (unless the position being considered supervises minors or dependent adults).
-            </p>
-            <h3 className="font-semibold">SEC. 4904. (5)</h3>
-            <p className="text-sm text-muted-foreground">
-              A Conviction that is more than seven years old, the date of Conviction being the date of sentencing, except that this restriction and any limitations imposed in this Article 49 based on the limitation in this subsection (a)(5) shall not apply where the applicant or employee is or will be (A) providing services to or have supervisory or disciplinary authority over a minor, (B) providing services to or have supervisory or disciplinary authority over a "dependent adult," as that phrase is defined in Illinois Adult Protective Services Act or any successor state law, or (C) providing support services or care to or has supervisory authority over a person 65 years or older;
-            </p>
+            <h3 className="font-semibold">Time & Rehabilitation Factors</h3>
+            <ul className="list-disc pl-5 text-sm">
+              <li>Employers must consider the length of time since the conviction and the age of the employee at the time of the conviction.</li>
+              <li>Other required factors: number of convictions, nature/severity, facts/circumstances, and evidence of rehabilitation.</li>
+            </ul>
+            <p className="text-xs text-muted-foreground">Reference: 6-10-054(c)</p>
+            <p className="text-xs text-muted-foreground mt-2">Source: <a href="https://www.chicago.gov/city/en/depts/cchr/supp_info/chicago_human_rights_ordinance.html" target="_blank" rel="noopener noreferrer" className="underline">Chicago Human Rights Ordinance</a></p>
           </div>
         );
       case 5:
+        // Evidence of Rehabilitation
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold">SEC. 4903. DEFINITIONS</h3>
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-sm font-medium mb-2">Rehabilitation Evidence</h4>
-                <ul className="text-sm text-muted-foreground space-y-2">
-                  <li>• Satisfactory compliance with parole/probation terms</li>
-                  <li>• Post-conviction employer recommendations</li>
-                  <li>• Educational achievements or vocational training</li>
-                  <li>• Completion of/participation in rehabilitative treatment</li>
-                  <li>• Letters of recommendation from qualified observers</li>
-                  <li>• Age at time of conviction</li>
+            <h3 className="font-semibold">Evidence of Rehabilitation</h3>
+            <ul className="list-disc pl-5 text-sm">
+              <li>Employers must consider any evidence of rehabilitation efforts provided by the applicant or employee.</li>
+              <li>Rehabilitation may include completion of education, job training, treatment programs, or other positive changes since the conviction.</li>
                 </ul>
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium mb-2">Voluntary Mitigating Factors</h4>
-                <ul className="text-sm text-muted-foreground space-y-2">
-                  <li>• Coercive conditions preceding offense</li>
-                  <li>• History of intimate physical/emotional abuse</li>
-                  <li>• Untreated substance abuse</li>
-                  <li>• Untreated mental illness</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        );
-      case 7:
-        return (
-          <div className="space-y-4">
-            <h3 className="font-semibold">SEC. 4904 (h)</h3>
-            <p className="text-sm text-muted-foreground">
-              If, within seven days of the date that the notice described in subsection (g) is provided by the Employer to the applicant or employee, the applicant or employee gives the Employer notice, orally or in writing, of evidence of the inaccuracy of the item or items of Conviction History or any Evidence of Rehabilitation or Other Mitigating Factors, the Employer shall delay any Adverse Action for a reasonable period after receipt of the information and during that time shall reconsider the prospective Adverse Action in light of the information.
-            </p>
+            <p className="text-xs text-muted-foreground">Reference: 6-10-054(c)(6)</p>
+            <p className="text-xs text-muted-foreground mt-2">Source: <a href="https://www.chicago.gov/city/en/depts/cchr/supp_info/chicago_human_rights_ordinance.html" target="_blank" rel="noopener noreferrer" className="underline">Chicago Human Rights Ordinance</a></p>
           </div>
         );
       case 6:
+        // Assessment Summary
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold">SEC. 4910. EMPLOYER RECORDS</h3>
-            <p className="text-sm text-muted-foreground">
-              (a) An Employer shall retain records of employment, application forms, and other pertinent data and records required under this Article, for a period of three years, and shall allow the OLSE access to such records, with appropriate notice and at a mutually agreeable time, to monitor compliance with the requirements of this Article.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              (d) Where an Employer does not maintain or retain adequate records documenting compliance with this Article or does not allow the OLSE reasonable access to such records, it shall be presumed that the Employer did not comply with this Article, absent clear and convincing evidence otherwise.
-            </p>
+            <h3 className="font-semibold">Summary of Legal Requirements</h3>
+            <ul className="list-disc pl-5 text-sm">
+              <li>Employers must base decisions only on legally permissible information and must document their individualized assessment process.</li>
+              <li>All factors (time, nature, number, circumstances, age, rehabilitation) must be considered before making a final decision.</li>
+            </ul>
+            <p className="text-xs text-muted-foreground">Reference: 6-10-054(c)</p>
+            <p className="text-xs text-muted-foreground mt-2">Source: <a href="https://www.chicago.gov/city/en/depts/cchr/supp_info/chicago_human_rights_ordinance.html" target="_blank" rel="noopener noreferrer" className="underline">Chicago Human Rights Ordinance</a></p>
+          </div>
+        );
+      case 7:
+        // Candidate Notification
+        return (
+          <div className="space-y-4">
+            <h3 className="font-semibold">Pre-Adverse Action Notice</h3>
+            <ul className="list-disc pl-5 text-sm">
+              <li>If a preliminary decision is made to disqualify based on a conviction record, the employer must notify the candidate in writing.</li>
+              <li>The notice must include: the disqualifying conviction(s), a copy of the conviction record, and an explanation of the right to respond (including evidence of inaccuracy or rehabilitation).</li>
+              <li>The candidate must be given at least 5 business days to respond before a final decision is made.</li>
+            </ul>
+            <p className="text-xs text-muted-foreground">Reference: 6-10-054(d)</p>
+            <p className="text-xs text-muted-foreground mt-2">Source: <a href="https://www.chicago.gov/city/en/depts/cchr/supp_info/chicago_human_rights_ordinance.html" target="_blank" rel="noopener noreferrer" className="underline">Chicago Human Rights Ordinance</a></p>
           </div>
         );
       case 8:
+        // Final Decision
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold">SEC. 4904 (f), (g), (i)</h3>
-            <p className="text-sm text-muted-foreground">
-              In making an employment decision based on an applicant's or employee's Conviction History, an Employer shall conduct an individualized assessment, considering only Directly-Related Convictions, the time that has elapsed since the Conviction or Unresolved Arrest, and any evidence of inaccuracy or Evidence of Rehabilitation or Other Mitigating Factors.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              If an Employer intends to base an Adverse Action on an item or items in the applicant or employee's Conviction History, prior to taking any Adverse Action the Employer shall provide the applicant or employee with a copy of the Background Check Report, if any, and shall notify the applicant or employee of the prospective Adverse Action and the items forming the basis for the prospective Adverse Action.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Upon taking any final Adverse Action based upon the Conviction History of an applicant or employee, an Employer shall notify the applicant or employee of the final Adverse Action.
-            </p>
+            <h3 className="font-semibold">Final Adverse Action</h3>
+            <ul className="list-disc pl-5 text-sm">
+              <li>Before taking final adverse action, the employer must consider any information submitted by the candidate in response to the pre-adverse notice.</li>
+              <li>If a final decision is made to disqualify, the employer must notify the candidate in writing, including: the disqualifying conviction(s), any appeal/reconsideration process, and the right to file a complaint with the Commission.</li>
+            </ul>
+            <p className="text-xs text-muted-foreground">Reference: 6-10-054(d)(3)</p>
+            <p className="text-xs text-muted-foreground mt-2">Source: <a href="https://www.chicago.gov/city/en/depts/cchr/supp_info/chicago_human_rights_ordinance.html" target="_blank" rel="noopener noreferrer" className="underline">Chicago Human Rights Ordinance</a></p>
           </div>
         );
       default:
@@ -402,7 +446,7 @@ export default function AssessmentEvaluate() {
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-            Pursuant to the Cook County Human Rights Ordinance, we consider for employment qualified applicants with arrest and conviction records.
+            Pursuant to the Chicago Human Rights Ordinance, we consider for employment qualified applicants with arrest and conviction records.
             </p>
           </div>
         );
@@ -418,7 +462,7 @@ export default function AssessmentEvaluate() {
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-            We are committed to fair hiring practices and fully adheres to the requirements set forth by the Cook County Commission on Human Rights under the Human Rights Ordinance. This includes providing applicants with automated notice of their right to file a complaint with the Commission if they believe we are not in compliance with the law.
+            We are committed to fair hiring practices and fully adheres to the requirements set forth by the Chicago Commission on Human Rights under the Human Rights Ordinance. This includes providing applicants with automated notice of their right to file a complaint with the Commission if they believe we are not in compliance with the law.
             </p>
           </div>
         );
@@ -508,67 +552,6 @@ export default function AssessmentEvaluate() {
             </ul>
           </div>
         );
-      case 4:
-        return (
-          <div className="space-y-4">
-            <h3 className="font-semibold">Time Elapsed Since Offense & Completion of Sentence</h3>
-            <ul className="text-sm text-muted-foreground space-y-2">
-              <li>• Conviction Date to Present: ~ 7 years (86 months)</li>
-              <li>• Release to Present: ~ 23 months</li>
-              <li>• Completion of Supervision to Present: &lt; 1 month (fully resolved)</li>
-            </ul>
-            <p className="text-sm text-muted-foreground mt-4">
-              The substantial passage of time and successful completion of supervision signal reduced recidivism risk under established criminogenic‑need models.
-            </p>
-          </div>
-        );
-      case 5:
-        return (
-          <div className="space-y-4">
-            <h3 className="font-semibold">Evidence of Rehabilitation & Good Conduct</h3>
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium mb-2">Recovery & Support</h4>
-                <p className="text-sm text-muted-foreground">
-                  • 18‑month verified sobriety; Narcotics Anonymous sponsor support
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium mb-2">Education</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• GED with honors</li>
-                  <li>• A.A.S., Business Administration – Borough of Manhattan CC (CUNY)</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium mb-2">Industry Credentials</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• OSHA 10‑Hour General Industry (Mar 2020)</li>
-                  <li>• NY Dept. of Public Health – Food Handler Certificate (valid through Apr 2023)</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium mb-2">Professional Development</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Self‑taught data analysis (Excel, SQL basics)</li>
-                  <li>• Project management coursework</li>
-                  <li>• Bilingual (English/Spanish)</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium mb-2">Community Service</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Reentry Coordinator, Osborne Association – founded 20‑student mentorship program for children of incarcerated parents</li>
-                  <li>• Facilitator of restorative‑justice circles inside custody</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        );
       default:
         return (
           <div className="text-sm text-muted-foreground">
@@ -578,6 +561,423 @@ export default function AssessmentEvaluate() {
     }
   };
 
+  // Restore the renderStepContent function
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Confirm Conditional Offer</h2>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  id="offer-yes"
+                  name="conditional-offer"
+                  checked={hasConditionalOffer === "yes"}
+                  onChange={() => setHasConditionalOffer("yes")}
+                  className="h-5 w-5 appearance-none rounded-full border-2 border-gray-400 bg-white checked:bg-cinnabar checked:border-cinnabar checked:ring-0 checked:ring-offset-0 focus:ring-0 focus:ring-offset-0 transition before:content-[''] before:block before:w-3 before:h-3 before:rounded-full before:mx-auto before:my-auto before:bg-cinnabar before:opacity-0 checked:before:opacity-100"
+                  style={{ boxShadow: "none", outline: "none", position: "relative" }}
+                />
+                <label htmlFor="offer-yes" className="text-base font-poppins font-normal">Yes, a conditional offer has been extended</label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  id="offer-no"
+                  name="conditional-offer"
+                  checked={hasConditionalOffer === "no"}
+                  onChange={() => setHasConditionalOffer("no")}
+                  className="h-5 w-5 appearance-none rounded-full border-2 border-gray-400 bg-white checked:bg-cinnabar checked:border-cinnabar checked:ring-0 checked:ring-offset-0 focus:ring-0 focus:ring-offset-0 transition before:content-[''] before:block before:w-3 before:h-3 before:rounded-full before:mx-auto before:my-auto before:bg-cinnabar before:opacity-0 checked:before:opacity-100"
+                  style={{ boxShadow: "none", outline: "none", position: "relative" }}
+                />
+                <label htmlFor="offer-no" className="text-base font-poppins font-normal">No, a conditional offer has not been extended</label>
+              </div>
+            </div>
+          </div>
+        );
+      case 2:
+        // Validate Document Basis step (already implemented above)
+        return (
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="space-y-6 md:w-1/2">
+            <h2 className="text-2xl font-bold">Validate Document Basis</h2>
+            <p className="text-muted-foreground">
+              Review the following criteria to ensure only legally permissible information is considered.
+            </p>
+            <div className="space-y-6">
+                {/* Checklist Items */}
+              <div className="flex items-center gap-4">
+                <Checkbox
+                    id="decriminalized-conduct"
+                    checked={documentValidation.isDecriminalized}
+                    onCheckedChange={(checked) => setDocumentValidation(prev => ({ ...prev, isDecriminalized: checked as boolean }))}
+                  className="h-6 w-6 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:text-green-500 focus:ring-0 focus:ring-offset-0 transition"
+                  style={{ borderColor: "#d1d5db" }}
+                />
+                <div>
+                  <div className="text-base font-bold font-poppins leading-tight">
+                      Are any convictions for decriminalized conduct, including those related to cannabis consumption or possession?
+                  </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Checkbox
+                    id="arrests-no-conviction"
+                    checked={documentValidation.isOld}
+                    onCheckedChange={(checked) => setDocumentValidation(prev => ({ ...prev, isOld: checked as boolean }))}
+                    className="h-6 w-6 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:text-green-500 focus:ring-0 focus:ring-offset-0 transition"
+                    style={{ borderColor: "#d1d5db" }}
+                  />
+                  <div>
+                    <div className="text-base font-bold font-poppins leading-tight">
+                      Are there Arrests that did not lead to a conviction?
+              </div>
+                  </div>
+                </div>
+              <div className="flex items-center gap-4">
+                <Checkbox
+                    id="juvenile-convictions"
+                  checked={documentValidation.isJuvenile}
+                    onCheckedChange={(checked) => setDocumentValidation(prev => ({ ...prev, isJuvenile: checked as boolean }))}
+                  className="h-6 w-6 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:text-green-500 focus:ring-0 focus:ring-offset-0 transition"
+                  style={{ borderColor: "#d1d5db" }}
+                />
+                <div>
+                  <div className="text-base font-bold font-poppins leading-tight">
+                      Are there Convictions from the juvenile justice system?
+                  </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Checkbox
+                    id="dismissed-expunged-sealed"
+                    checked={documentValidation.isDismissed}
+                    onCheckedChange={(checked) => setDocumentValidation(prev => ({ ...prev, isDismissed: checked as boolean }))}
+                    className="h-6 w-6 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:text-green-500 focus:ring-0 focus:ring-offset-0 transition"
+                    style={{ borderColor: "#d1d5db" }}
+                  />
+                  <div>
+                    <div className="text-base font-bold font-poppins leading-tight">
+                      Are there convictions that have been dismissed, expunged, or sealed?
+              </div>
+                  </div>
+                </div>
+              <div className="flex items-center gap-4">
+                <Checkbox
+                    id="older-than-5"
+                    checked={documentValidation.isOlderThan5}
+                    onCheckedChange={(checked) => setDocumentValidation(prev => ({ ...prev, isOlderThan5: checked as boolean }))}
+                  className="h-6 w-6 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:text-green-500 focus:ring-0 focus:ring-offset-0 transition"
+                  style={{ borderColor: "#d1d5db" }}
+                />
+                <div>
+                  <div className="text-base font-bold font-poppins leading-tight">
+                      Are there convictions that are more than 5 years old?
+                  </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 hidden md:block">
+              <iframe
+                src="/Background_Check_Summary_Jacobi_Iverson.pdf"
+                title="Background Report"
+                className="w-full h-[600px] border rounded"
+              />
+            </div>
+          </div>
+        );
+      case 3:
+        // Direct Job-Relation Inquiry step
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Direct Job-Relation Inquiry</h2>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="related-exception"
+                  checked={jobRelationSelections.exception}
+                  onCheckedChange={(checked) => {
+                    setJobRelationSelections(prev => ({ ...prev, exception: checked as boolean }));
+                    if (checked) setShowExceptionModal(true);
+                  }}
+                />
+                <Label htmlFor="related-exception">Requires an exception</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="related-yes"
+                  checked={jobRelationSelections.related}
+                  onCheckedChange={(checked) => setJobRelationSelections(prev => ({ ...prev, related: checked as boolean }))}
+                />
+                  <Label htmlFor="related-yes">Yes, the conviction is directly related to job duties</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="related-no"
+                  checked={jobRelationSelections.unrelated}
+                  onCheckedChange={(checked) => setJobRelationSelections(prev => ({ ...prev, unrelated: checked as boolean }))}
+                />
+                <Label htmlFor="related-no">No, the conviction is not directly related to job duties</Label>
+                </div>
+              </div>
+            {/* Show selected exceptions if chosen */}
+            {jobRelationSelections.exception && selectedExceptions.length > 0 && (
+              <div className="mt-4 p-3 border rounded bg-muted">
+                <div className="font-semibold mb-2">Selected Exception(s):</div>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  {selectedExceptions.map((ex, i) => (
+                    <li key={i}>{ex}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* Show job duty/explanation fields if related is checked */}
+            {jobRelationSelections.related && (
+              <div className="space-y-4">
+                <div>
+                  <Label>Select Related Job Duties</Label>
+                  <Select
+                    value={jobRelation.duties[0]}
+                    onValueChange={(value) => setJobRelation(prev => ({ ...prev, duties: [value] }))}
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Choose a job duty" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="financial">Financial Management</SelectItem>
+                      <SelectItem value="sensitive">Access to Sensitive Data</SelectItem>
+                      <SelectItem value="supervision">Supervision of Others</SelectItem>
+                      <SelectItem value="security">Security Responsibilities</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Explain the Direct Relationship</Label>
+                  <Textarea
+                    value={jobRelation.explanation}
+                    onChange={(e) => setJobRelation(prev => ({ ...prev, explanation: e.target.value }))}
+                    placeholder="Describe how the conviction directly relates to job responsibilities..."
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      case 4:
+        // Time Elapsed Analysis step (updated dropdown)
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Time Elapsed Analysis</h2>
+            <Select
+              value={timeElapsed}
+              onValueChange={setTimeElapsed}
+            >
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Select time elapsed since offense" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="1">1 year</SelectItem>
+                <SelectItem value="2">2 years</SelectItem>
+                <SelectItem value="3">3 years</SelectItem>
+                <SelectItem value="4">4 years</SelectItem>
+                <SelectItem value="5">5 years</SelectItem>
+                <SelectItem value="6">6 years</SelectItem>
+                <SelectItem value="7">7 years</SelectItem>
+                <SelectItem value="7plus">7+ years</SelectItem>
+              </SelectContent>
+            </Select>
+            <div>
+              <Label htmlFor="timeElapsedAge" className="font-semibold mt-4">Age of Employee at Time of Conviction</Label>
+              <Input
+                id="timeElapsedAge"
+                type="number"
+                min="0"
+                value={timeElapsedAge}
+                onChange={e => setTimeElapsedAge(e.target.value)}
+                placeholder="Enter age at time of conviction"
+                className="mt-1 w-48"
+              />
+            </div>
+          </div>
+        );
+      case 5:
+        // Evidence of Rehabilitation step
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Evidence of Rehabilitation</h2>
+            <RadioGroup
+              value={rehabilitation.hasEvidence === null ? "" : rehabilitation.hasEvidence.toString()}
+              onValueChange={(value) => {
+                setRehabilitation(prev => ({ ...prev, hasEvidence: value === "true" }));
+                if (value === "false") setShowNoEvidenceModal(true);
+              }}
+            >
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="true" id="evidence-yes" />
+                  <Label htmlFor="evidence-yes">Yes, evidence was provided</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="false" id="evidence-no" />
+                  <Label htmlFor="evidence-no">No evidence was provided</Label>
+                </div>
+              </div>
+            </RadioGroup>
+            <div>
+              <Label>Rehabilitation Notes</Label>
+              <Textarea
+                value={rehabilitation.notes}
+                onChange={(e) => setRehabilitation(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Document any evidence of rehabilitation or mitigating factors..."
+              />
+            </div>
+            {/* Modal for No Evidence PDF */}
+            <Dialog open={showNoEvidenceModal} onOpenChange={setShowNoEvidenceModal}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>Candidate's Response</DialogTitle>
+                </DialogHeader>
+                <div className="w-full h-[600px]">
+                  <iframe
+                    src="/Jacobi%20Iverson%20-%20Restorative%20Record%20.pdf"
+                    title="Candidate Response PDF"
+                    className="w-full h-full border rounded"
+                  />
+                </div>
+                <div className="flex justify-end mt-4">
+                  <Button onClick={() => setShowNoEvidenceModal(false)}>Close</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        );
+      case 6:
+        // Assessment Summary step
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Assessment Summary</h2>
+            <div className="space-y-4">
+              <div className="rounded-lg border p-4">
+                <h3 className="font-semibold mb-2">Job-relatedness</h3>
+                <p>{jobRelation.isRelated ? "Directly related" : "Not directly related"}</p>
+                {jobRelation.isRelated && (
+                  <>
+                    <p className="text-sm text-muted-foreground mt-2">Related duties:</p>
+                    <ul className="list-disc pl-5">
+                      {jobRelation.duties.map(duty => (
+                        <li key={duty}>{duty}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+              <div className="rounded-lg border p-4">
+                <h3 className="font-semibold mb-2">Time Elapsed</h3>
+                <p>{timeElapsed.replace("-", " to ")}</p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <h3 className="font-semibold mb-2">Rehabilitation Evidence</h3>
+                <p>{rehabilitation.hasEvidence ? "Evidence provided" : "No evidence provided"}</p>
+                {rehabilitation.notes && (
+                  <p className="text-sm text-muted-foreground mt-2">{rehabilitation.notes}</p>
+                )}
+              </div>
+              <div className="flex items-start space-x-3 mt-6">
+                <Checkbox
+                  id="certification"
+                  checked={certificationChecked}
+                  onCheckedChange={(checked) => setCertificationChecked(checked as boolean)}
+                />
+                <Label htmlFor="certification" className="text-sm">
+                  I certify that this decision complies with the Fair Chance Ordinance and is based solely on legally permissible information.
+                </Label>
+              </div>
+            </div>
+          </div>
+        );
+      case 7:
+        // Candidate Notification step
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Candidate Notification</h2>
+            <div className="rounded-lg border p-4 bg-muted">
+              <h3 className="font-semibold mb-2">Notice of Intent to Take Adverse Action</h3>
+              <p className="text-sm text-muted-foreground">
+                You must give the candidate 7 days to respond before proceeding with any adverse action. During this time, no hiring decision may be finalized.
+              </p>
+            </div>
+            <Button onClick={() => setShowNoticeDialog(true)}>
+              Preview & Send Notice
+            </Button>
+          </div>
+        );
+      case 8:
+        // Final Decision step (WOTC logic handled elsewhere)
+        if (showWOTCSigningScreen) {
+          return (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold">WOTC Tax Credit Details</h2>
+              <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
+                <h3 className="text-xl font-semibold text-green-800 dark:text-green-300 mb-2">Tax Credit Value</h3>
+                <p className="text-green-700 dark:text-green-400 text-lg">
+                  You are eligible for <span className="font-bold">40% of first-year wages</span> (up to $6,000) if the person works at least 400 hours as part of a WOTC targeted group.
+                </p>
+              </div>
+              <Card className="p-6 bg-secondary">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 mt-1 flex-shrink-0" />
+                  <div className="space-y-3">
+                    <h4 className="font-semibold">Policy Information</h4>
+                    <p className="text-sm text-muted-foreground">
+                      The Work Opportunity Tax Credit (WOTC) is a federal tax credit available to employers who invest in American job seekers who have consistently faced barriers to employment. Employers may meet their business needs and claim a tax credit if they hire an individual who is in a WOTC targeted group.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Employers must apply for and receive a certification verifying the new hire is a member of a targeted group before they can claim the tax credit. After the required certification is secured, taxable employers claim the WOTC as a general business credit against their income taxes, and tax-exempt employers claim the WOTC against their payroll taxes.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      WOTC is authorized until December 31, 2025 (Section 113 of Division EE of P.L. 116-260 -- Consolidated Appropriations Act, 2021).
+                    </p>
+                  </div>
+                </div>
+              </Card>
+              <div className="flex justify-end mt-6">
+                <Button onClick={handleSignAndSend}>SIGN & SEND FOR REVIEW</Button>
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Final Decision</h2>
+            <div className="space-y-4">
+              <Textarea placeholder="Provide final justification for the hiring decision..." />
+              <div className="flex gap-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 ia-button-outline px-5 py-2 rounded-md text-base font-poppins"
+                  onClick={handleProceedWithHire}
+                >
+                  Proceed with Hire
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  className="flex-1 ia-button-primary bg-cinnabar text-white hover:bg-cinnabar-600 px-5 py-2 rounded-md text-base font-poppins"
+                  onClick={() => setShowFinalNoticeDialog(true)}
+                >
+                  Take Adverse Action
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Restore the original renderOfferLetterContent function and modal UI
   const renderOfferLetterContent = () => {
     return (
       <div className="space-y-6 max-h-[60vh] overflow-y-auto">
@@ -586,8 +986,8 @@ export default function AssessmentEvaluate() {
           <p>RE: Conditional Offer of Employment & Notice of Conviction Background Check</p>
           <p>Dear {offerLetterData.applicantName || "[APPLICANT NAME]"}:</p>
           <p>
-            We are writing to make you a conditional offer of employment for the position of {offerLetterData.position || "[INSERT POSITION]"}. 
-            Before this job offer becomes final, we will check your conviction history. The form attached to this letter asks for your permission 
+            We are writing to make you a conditional offer of employment for the position of {offerLetterData.position || "[INSERT POSITION]"}.
+            Before this job offer becomes final, we will check your conviction history. The form attached to this letter asks for your permission
             to check your conviction history and provides more information about that background check.
           </p>
           <p>After reviewing your conviction history report, we will either:</p>
@@ -596,16 +996,17 @@ export default function AssessmentEvaluate() {
             <li>Notify you in writing that we intend to revoke (take back) this job offer because of your conviction history.</li>
           </ul>
           <p>
-            Under Cook County law, employers cannot ask about or use the following criminal records in hiring decisions:
+            Prohibit the consideration of the following items that may arise from a background check in hiring decisions:
           </p>
           <ul className="list-disc pl-5 space-y-2">
-            <li>Arrests that did not lead to a conviction</li>
-            <li>Juvenile records</li>
-            <li>Sealed or expunged convictions</li>
-            <li>Old convictions unrelated to the job</li>
+            <li>Any conviction for decriminalized conduct, including those related to cannabis consumption or possession.</li>
+            <li>Arrests that did not lead to a conviction.</li>
+            <li>Convictions from the juvenile justice system.</li>
+            <li>A conviction that has been dismissed, expunged, or sealed.</li>
+            <li>A conviction that is more than 5 years old, unless there are legal, funding, or grant requirements tied to the role, or it is within the Mayor's Office, which shall be subject to a 7-year lookback period.</li>
           </ul>
           <p>
-            As required by the Cook County Human Rights Ordinance, we will consider whether your conviction history is directly related 
+            As required by the Chicago Human Rights Ordinance, we will consider whether your conviction history is directly related
             to the duties of the job we have offered you. Before making any final decision, we will consider all of the following:
           </p>
           <ul className="list-disc pl-5 space-y-2">
@@ -620,20 +1021,19 @@ export default function AssessmentEvaluate() {
             <li>Any other information which the County of Cook deems relevant to your suitability for the position</li>
           </ul>
           <p>
-            We will notify you in writing if we plan to revoke (take back) this job offer after reviewing your conviction history. 
+            We will notify you in writing if we plan to revoke (take back) this job offer after reviewing your conviction history.
             That decision will be preliminary, and you will have an opportunity to respond before it becomes final.
           </p>
           <p>
-            We will identify conviction(s) that concern us, give you a copy of the background check report, and allow you at least 
-            5 business days to respond with information showing the conviction history report is inaccurate and/or with information 
+            We will identify conviction(s) that concern us, give you a copy of the background check report, and allow you at least
+            5 business days to respond with information showing the conviction history report is inaccurate and/or with information
             about your rehabilitation or mitigating circumstances.
           </p>
           <p>
-            We will review any information you timely submit and then decide whether to finalize or take back this conditional job offer. 
+            We will review any information you timely submit and then decide whether to finalize or take back this conditional job offer.
             We will notify you of that decision in writing.
           </p>
         </div>
-
         <div className={isEditingLetter ? "space-y-4" : "hidden"}>
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
@@ -667,735 +1067,370 @@ export default function AssessmentEvaluate() {
     );
   };
 
+  // Update renderNoticeContent to be an interactive form with the specified elements
   const renderNoticeContent = () => {
     return (
-      <div className="space-y-6 max-h-[60vh] overflow-y-auto">
-        <div className={!isEditingNotice ? "space-y-4" : "hidden"}>
-          <p>[{noticeData.date}]</p>
-          <p>Re: Preliminary Decision to Revoke Job Offer Because of Conviction History</p>
-          <p>Dear {noticeData.applicantName || "[APPLICANT NAME]"}:</p>
-          <p>
-            After reviewing the results of your conviction history background check, we have made a preliminary
-            (non-final) decision to revoke (take back) our previous job offer for the position of {noticeData.position || "[INSERT POSITION]"} 
-            because of the following conviction(s):
-          </p>
-          <p>{noticeData.convictions || "[LIST CONVICTION(S) THAT LED TO DECISION TO REVOKE OFFER]"}</p>
-          
-          <p>Our Individualized Assessment:</p>
-          <p>
-            We have individually assessed whether your conviction history is directly related to the duties of the
-            job we offered you. We considered the following:
-          </p>
-          <ol className="list-decimal pl-5 space-y-2">
-            <li>
-              The nature and seriousness of the conduct that led to your conviction(s), which we assessed
-              as follows: {noticeData.assessmentNotes || "[DESCRIBE WHY CONSIDERED SERIOUS]"}
-            </li>
-            <li>
-              How long ago the conduct occurred that led to your conviction, which was: {noticeData.timeSinceOffense || "[INSERT AMOUNT OF TIME PASSED]"} 
-              and how long ago you completed your sentence, which was: {noticeData.timeSinceSentence || "[INSERT AMOUNT OF TIME PASSED]"}.
-            </li>
-            <li>
-              The specific duties and responsibilities of the position of {noticeData.position || "[INSERT POSITION]"},
-              which are: {noticeData.jobDuties || "[LIST JOB DUTIES]"}
-            </li>
-          </ol>
-          
-          <p>
-            We believe your conviction record lessens your fitness/ability to perform the job duties because:
-            {noticeData.fitnessImpact}
-          </p>
-        </div>
-
-        <div className={isEditingNotice ? "space-y-4" : "hidden"}>
-          <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
+      <form className="space-y-6 max-h-[60vh] overflow-y-auto">
+        <h2 className="text-2xl font-bold mb-2">Pre-Adverse Action Notice</h2>
+        {/* Candidate Name and Position Title fields at the top */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <Label htmlFor="notice-applicantName" className="font-semibold">Candidate Name</Label>
             <Input
-              id="date"
-              type="date"
-              value={noticeData.date}
-              onChange={(e) => setNoticeData(prev => ({ ...prev, date: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="applicantName">Applicant Name</Label>
-            <Input
-              id="applicantName"
+              id="notice-applicantName"
               value={noticeData.applicantName}
-              onChange={(e) => setNoticeData(prev => ({ ...prev, applicantName: e.target.value }))}
-              placeholder="Enter applicant name"
+              onChange={e => setNoticeData(prev => ({ ...prev, applicantName: e.target.value }))}
+              placeholder="Enter candidate's full name"
+              className="mt-1"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="position">Position</Label>
+          <div className="flex-1">
+            <Label htmlFor="notice-position" className="font-semibold">Position Title</Label>
             <Input
-              id="position"
+              id="notice-position"
               value={noticeData.position}
-              onChange={(e) => setNoticeData(prev => ({ ...prev, position: e.target.value }))}
+              onChange={e => setNoticeData(prev => ({ ...prev, position: e.target.value }))}
               placeholder="Enter position title"
+              className="mt-1"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="convictions">Convictions</Label>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="convictionRecord" className="font-semibold">1. Conviction Record/History Report (if any)</Label>
+            {/* Visual cue for attached background report */}
+            <div className="flex items-center gap-2 mt-2 mb-2 p-2 bg-gray-50 border border-gray-200 rounded">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cinnabar" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 108.485 8.486L20.5 13" /></svg>
+              <span className="text-sm text-cinnabar font-medium">Background_Check_Summary_Jacobi_Iverson.pdf</span>
+              <span className="text-xs text-muted-foreground ml-2">(Background report attached and will be sent with this notice)</span>
+            </div>
             <Textarea
-              id="convictions"
+              id="convictionRecord"
               value={noticeData.convictions}
               onChange={(e) => setNoticeData(prev => ({ ...prev, convictions: e.target.value }))}
-              placeholder="List convictions that led to decision"
+              placeholder="Enter the candidate's conviction record or background check findings, if any."
+              className="mt-2"
             />
           </div>
-          <div className="space-y-2">
-            
-            <Label htmlFor="assessmentNotes">Assessment Notes</Label>
-            <Textarea
-              id="assessmentNotes"
-              value={noticeData.assessmentNotes}
-              onChange={(e) => setNoticeData(prev => ({ ...prev, assessmentNotes: e.target.value }))}
-              placeholder="Describe why the convictions are considered serious"
-            />
+          
+          <div>
+            <Label className="font-semibold">2. The Disqualifying Conviction(s) and Explanation</Label>
+            <div className="space-y-2 mt-2">
+              {disqualifyingExceptions.map((option: string, idx: number) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`exception-${idx}`}
+                    checked={noticeData.selectedExceptions.includes(option)}
+                    onCheckedChange={checked => {
+                      setNoticeData(prev => ({
+                        ...prev,
+                        selectedExceptions: checked
+                          ? [...prev.selectedExceptions, option]
+                          : prev.selectedExceptions.filter((o: string) => o !== option),
+                      }));
+                    }}
+                  />
+                  <label htmlFor={`exception-${idx}`} className="text-sm cursor-pointer select-none">
+                    {option}
+                  </label>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2">
+              <Label htmlFor="exceptionExplanation" className="text-sm">Additional Explanation (optional)</Label>
+              <Textarea
+                id="exceptionExplanation"
+                value={noticeData.exceptionExplanation}
+                onChange={e => setNoticeData(prev => ({ ...prev, exceptionExplanation: e.target.value }))}
+                placeholder="Provide any additional explanation for the disqualification (optional)"
+                className="mt-1"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="timeSinceOffense">Time Since Offense</Label>
-            <Input
-              id="timeSinceOffense"
-              value={noticeData.timeSinceOffense}
-              onChange={(e) => setNoticeData(prev => ({ ...prev, timeSinceOffense: e.target.value }))}
-              placeholder="Enter time since offense"
-            />
+          
+          <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+            <h3 className="font-semibold text-blue-800 mb-2">3. Applicant's Right to Respond</h3>
+            <p className="text-sm text-blue-700 mb-3">
+              You have the right to respond to this notice before any final decision is made. You may:
+            </p>
+            <ul className="text-sm text-blue-700 space-y-1 mb-3 list-disc pl-5">
+              <li>Challenge the accuracy of the conviction record</li>
+              <li>Provide evidence of rehabilitation or mitigation</li>
+              <li>Submit any other information you wish us to consider</li>
+            </ul>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="timeSinceSentence">Time Since Sentence Completion</Label>
-            <Input
-              id="timeSinceSentence"
-              value={noticeData.timeSinceSentence}
-              onChange={(e) => setNoticeData(prev => ({ ...prev, timeSinceSentence: e.target.value }))}
-              placeholder="Enter time since sentence completion"
-            />
+          
+          <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+            <h3 className="font-semibold text-yellow-800 mb-2">4. Response Deadlines</h3>
+            <div className="space-y-2 text-sm">
+              <p className="text-yellow-700">
+                <strong>Chicago HRO & IHRA Compliance:</strong> You have <strong>5 business days</strong> from the date of this notice to respond.
+              </p>
+              <p className="text-yellow-700">
+                <strong>EBFA Compliance:</strong> You have <strong>7 calendar days</strong> from the date of this notice to respond.
+              </p>
+              <p className="text-yellow-700 font-semibold">
+                No final adverse action will be taken until the applicable response period has passed.
+              </p>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="jobDuties">Job Duties</Label>
-            <Textarea
-              id="jobDuties"
-              value={noticeData.jobDuties}
-              onChange={(e) => setNoticeData(prev => ({ ...prev, jobDuties: e.target.value }))}
-              placeholder="List relevant job duties"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="fitnessImpact">Impact on Job Fitness</Label>
-            <Textarea
-              id="fitnessImpact"
-              value={noticeData.fitnessImpact}
-              onChange={(e) => setNoticeData(prev => ({ ...prev, fitnessImpact: e.target.value }))}
-              placeholder="Explain how the conviction impacts job fitness"
-            />
+          
+          <div className="p-4 bg-green-50 border-l-4 border-green-400 rounded">
+            <h3 className="font-semibold text-green-800 mb-2">5. EBFA Compliance Notice</h3>
+            <p className="text-sm text-green-700">
+              <strong>Employer Notification Requirement:</strong> As required by the Employee Background Fairness Act (EBFA), 
+              we will notify you before or when filling the position if you are not selected for this role.
+            </p>
           </div>
         </div>
-      </div>
+      </form>
     );
   };
 
   const renderFinalNoticeContent = () => {
     return (
-      <div className="space-y-6 max-h-[60vh] overflow-y-auto">
-        <div className={!isEditingFinalNotice ? "space-y-4" : "hidden"}>
-          <p>[{finalNoticeData.date}]</p>
-          <p>Re: Final Decision to Revoke Job Offer Because of Conviction History</p>
-          <p>Dear {finalNoticeData.applicantName || "[APPLICANT NAME]"}:</p>
-          <p>
-            We are following up about our letter dated {finalNoticeData.initialNoticeDate || "[DATE OF NOTICE]"} which notified you of our initial
-            decision to revoke (take back) the conditional job offer:
-          </p>
-          
-          <div className="space-y-2">
-            <p>{finalNoticeData.receivedResponse ? 
-              `We made a final decision to revoke the job offer after considering the information you submitted, which included: ${finalNoticeData.responseDetails}` :
-              "We did not receive a timely response from you after sending you that letter, and our decision to revoke the job offer is now final."
-            }</p>
+      <div className="space-y-6">
+        <h3 className="font-semibold text-xl">Final Notice of Decision</h3>
+        <div className="space-y-4">
+          {/* 1. Conviction(s) leading to the decision */}
+          <div>
+            <div className="font-semibold mb-1">Conviction(s) Leading to This Decision</div>
+            <Textarea
+              value={finalNoticeData.assessmentNotes}
+              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, assessmentNotes: e.target.value }))}
+              placeholder="State the conviction(s) that led to this adverse decision."
+              className="bg-white"
+            />
           </div>
 
-          <p>
-            After reviewing the information you submitted, we have determined that there 
-            {finalNoticeData.convictionError ? " was " : " was not "} an error on your conviction history report. 
-            We have decided to revoke our job offer because of the following conviction(s):
-          </p>
-          
-          <p>{finalNoticeData.convictions || "[LIST CONVICTION(S) THAT LED TO DECISION TO REVOKE OFFER]"}</p>
-          
-          <div className="space-y-4">
-            <p className="font-semibold">Our Individualized Assessment:</p>
-            <p>
-              We have individually assessed whether your conviction history is directly related to the duties of the
-              job we offered you. We considered the following:
-            </p>
-            <ol className="list-decimal pl-5 space-y-2">
-              <li>
-                The nature and seriousness of the conduct that led to your conviction(s), which we assessed
-                as follows: {finalNoticeData.assessmentNotes || "[DESCRIBE WHY CONSIDERED SERIOUS]"}
-              </li>
-              <li>
-                How long ago the conduct occurred that led to your conviction, which was: {finalNoticeData.timeSinceOffense || "[INSERT AMOUNT OF TIME PASSED]"} 
-                and how long ago you completed your sentence, which was: {finalNoticeData.timeSinceSentence || "[INSERT AMOUNT OF TIME PASSED]"}.
-              </li>
-              <li>
-                The specific duties and responsibilities of the position of {finalNoticeData.position || "[INSERT POSITION]"},
-                which are: {finalNoticeData.jobDuties || "[LIST JOB DUTIES]"}
-              </li>
-            </ol>
-            
-            <p>
-              We believe your conviction record lessens your fitness/ability to perform the job duties and have
-              made a final decision to revoke the job offer because: {finalNoticeData.fitnessImpact}
-            </p>
+          {/* 2. Appeal process (reconsideration request) */}
+          <div className="p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+            <div className="font-semibold mb-1">Appeal Process (Reconsideration Request)</div>
+            <Textarea
+              value={finalNoticeData.reconsiderationProcess}
+              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, reconsiderationProcess: e.target.value }))}
+              placeholder="Describe the process for appealing or requesting reconsideration, if any."
+              className="bg-white"
+            />
           </div>
 
-          <div className="space-y-4">
-            <p className="font-semibold">Request for Reconsideration:</p>
-            {finalNoticeData.reconsiderationAllowed ? (
-              <>
-                <p>If you would like to challenge this decision or request reconsideration, you may:</p>
-                <p>{finalNoticeData.reconsiderationProcess}</p>
-              </>
-            ) : (
-              <p>We do not offer any way to challenge this decision or request reconsideration.</p>
+          {/* 3. Right to file a complaint with the commission */}
+          <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+            <div className="font-semibold mb-1">Right to File a Complaint with the Commission</div>
+            <p className="text-sm mb-1">
+              You have the right to file a complaint of discrimination with:
+            </p>
+            <ul className="list-disc pl-6 text-sm mb-2">
+              <li><span className="font-semibold">Illinois Department of Human Rights (IDHR):</span> <a href="https://dhr.illinois.gov/" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">https://dhr.illinois.gov/</a> | (312) 814-6200</li>
+              <li><span className="font-semibold">Chicago Commission on Human Relations (CCHR):</span> <a href="https://www.chicago.gov/city/en/depts/cchr.html" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">https://www.chicago.gov/city/en/depts/cchr.html</a> | (312) 744-4111</li>
+            </ul>
+            <p className="text-xs text-muted-foreground">You may file a complaint if you believe this decision was made in violation of your rights under state or local law.</p>
+          </div>
+
+          {/* Supervisor Tagging Section */}
+          <div>
+            <Label className="font-semibold mb-1">Tag Supervisor(s) for Review</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {taggedSupervisors.map((email) => (
+                <span key={email} className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                  {email}
+                  <button
+                    type="button"
+                    className="ml-1 text-blue-600 hover:text-red-600"
+                    onClick={() => setTaggedSupervisors(taggedSupervisors.filter(e => e !== email))}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <Input
+              value={supervisorInput}
+              onChange={e => {
+                setSupervisorInput(e.target.value);
+                setShowSupervisorDropdown(e.target.value.includes("@"));
+              }}
+              onFocus={() => supervisorInput.includes("@") && setShowSupervisorDropdown(true)}
+              onBlur={() => setTimeout(() => setShowSupervisorDropdown(false), 150)}
+              placeholder="Type @ to tag a supervisor"
+              className="w-full"
+            />
+            {showSupervisorDropdown && (
+              <div className="absolute z-50 bg-white border rounded shadow mt-1 w-80 max-w-full">
+                {supervisorOptions.filter(opt =>
+                  opt.toLowerCase().includes(supervisorInput.replace("@", "").toLowerCase()) &&
+                  !taggedSupervisors.includes(opt)
+                ).map(opt => (
+                  <div
+                    key={opt}
+                    className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm"
+                    onMouseDown={() => {
+                      setTaggedSupervisors([...taggedSupervisors, opt]);
+                      setSupervisorInput("");
+                      setShowSupervisorDropdown(false);
+                    }}
+                  >
+                    {opt}
+                  </div>
+                ))}
+                {supervisorOptions.filter(opt =>
+                  opt.toLowerCase().includes(supervisorInput.replace("@", "").toLowerCase()) &&
+                  !taggedSupervisors.includes(opt)
+                ).length === 0 && (
+                  <div className="px-3 py-2 text-muted-foreground text-xs">No matches</div>
+                )}
+              </div>
             )}
           </div>
 
-          <div className="space-y-4">
-            <p className="font-semibold">Your Right to File a Complaint:</p>
-            <p>
-              If you believe your rights under the Cook County Human Rights Ordinance have been violated during this job
-              application process, you have the right to file a complaint with the Cook County Commission on Human Rights.
-            </p>
-            <p>There are several ways to file a complaint:</p>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>File a complaint online at: www.cookcountyil.gov/agency/commission-human-rights</li>
-              <li>
-                Download an intake form at: https://ccchr.my.salesforce-sites.com/Forms/advpm__IntakeForm?formId=a0m8z000000SsC4AAK&formWidth=800px&hh=1 
-              </li>
-              <li>
-                Visit the Cook County Commission on Human Rights office. For office locations: www.cookcountyil.gov/agency/commission-human-rights
-              </li>
-            </ul>
-            <p>
-              For more information, visit www.cookcountyil.gov/agency/commission-human-rights or call (312) 603-1100.
-            </p>
-          </div>
         </div>
-
-        <div className={isEditingFinalNotice ? "space-y-4" : "hidden"}>
-          <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={finalNoticeData.date}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, date: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="applicantName">Applicant Name</Label>
-            <Input
-              id="applicantName"
-              value={finalNoticeData.applicantName}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, applicantName: e.target.value }))}
-              placeholder="Enter applicant name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="position">Position</Label>
-            <Input
-              id="position"
-              value={finalNoticeData.position}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, position: e.target.value }))}
-              placeholder="Enter position title"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="initialNoticeDate">Initial Notice Date</Label>
-            <Input
-              id="initialNoticeDate"
-              type="date"
-              value={finalNoticeData.initialNoticeDate}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, initialNoticeDate: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Checkbox
-                checked={finalNoticeData.receivedResponse}
-                onCheckedChange={(checked) => 
-                  setFinalNoticeData(prev => ({ ...prev, receivedResponse: checked as boolean }))
-                }
-                className="h-5 w-5 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 focus:ring-green-500 transition"
-              />
-              Received response from candidate
-            </Label>
-          </div>
-          {finalNoticeData.receivedResponse && (
-            <div className="space-y-2">
-              <Label htmlFor="responseDetails">Response Details</Label>
-              <Textarea
-                id="responseDetails"
-                value={finalNoticeData.responseDetails}
-                onChange={(e) => setFinalNoticeData(prev => ({ ...prev, responseDetails: e.target.value }))}
-                placeholder="Enter details of candidate's response"
-              />
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Checkbox
-                checked={finalNoticeData.convictionError}
-                onCheckedChange={(checked) => 
-                  setFinalNoticeData(prev => ({ ...prev, convictionError: checked as boolean }))
-                }
-                className="h-5 w-5 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 focus:ring-green-500 transition"
-              />
-              Error found in conviction history report
-            </Label>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="convictions">Convictions</Label>
-            <Textarea
-              id="convictions"
-              value={finalNoticeData.convictions}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, convictions: e.target.value }))}
-              placeholder="List convictions that led to decision"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="assessmentNotes">Assessment Notes</Label>
-            <Textarea
-              id="assessmentNotes"
-              value={finalNoticeData.assessmentNotes}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, assessmentNotes: e.target.value }))}
-              placeholder="Describe why the convictions are considered serious"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="timeSinceOffense">Time Since Offense</Label>
-            <Input
-              id="timeSinceOffense"
-              value={finalNoticeData.timeSinceOffense}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, timeSinceOffense: e.target.value }))}
-              placeholder="Enter time since offense"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="timeSinceSentence">Time Since Sentence Completion</Label>
-            <Input
-              id="timeSinceSentence"
-              value={finalNoticeData.timeSinceSentence}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, timeSinceSentence: e.target.value }))}
-              placeholder="Enter time since sentence completion"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="jobDuties">Job Duties</Label>
-            <Textarea
-              id="jobDuties"
-              value={finalNoticeData.jobDuties}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, jobDuties: e.target.value }))}
-              placeholder="List relevant job duties"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="fitnessImpact">Impact on Job Fitness</Label>
-            <Textarea
-              id="fitnessImpact"
-              value={finalNoticeData.fitnessImpact}
-              onChange={(e) => setFinalNoticeData(prev => ({ ...prev, fitnessImpact: e.target.value }))}
-              placeholder="Explain how the conviction impacts job fitness"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Checkbox
-                checked={finalNoticeData.reconsiderationAllowed}
-                onCheckedChange={(checked) => 
-                  setFinalNoticeData(prev => ({ ...prev, reconsiderationAllowed: checked as boolean }))
-                }
-                className="h-5 w-5 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 focus:ring-green-500 transition"
-              />
-              Allow reconsideration requests
-            </Label>
-          </div>
-          {finalNoticeData.reconsiderationAllowed && (
-            <div className="space-y-2">
-              <Label htmlFor="reconsiderationProcess">Reconsideration Process</Label>
-              <Textarea
-                id="reconsiderationProcess"
-                value={finalNoticeData.reconsiderationProcess}
-                onChange={(e) => setFinalNoticeData(prev => ({ ...prev, reconsiderationProcess: e.target.value }))}
-                placeholder="Describe the reconsideration process"
-              />
-            </div>
-          )}
+        <div className="flex justify-end gap-3 mt-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowPreviewFinalNotice(true)}
+          >
+            Preview Final Notice
+          </Button>
+          <Button
+            className="ia-button-primary bg-cinnabar text-white hover:bg-cinnabar-600"
+            onClick={() => {
+              toast({
+                title: "Final Notice Sent",
+                description: "The final notice has been sent to the candidate.",
+              });
+              setShowFinalNoticeDialog(false);
+              setShowComplianceConfirmation(true);
+            }}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Send Final Notice
+          </Button>
         </div>
+        {/* Preview Final Notice Modal */}
+        <PreviewDialog open={showPreviewFinalNotice} onOpenChange={setShowPreviewFinalNotice}>
+          <PreviewDialogContent className="max-w-3xl">
+            <PreviewDialogHeader>
+              <PreviewDialogTitle>Preview: Final Notice Letter</PreviewDialogTitle>
+            </PreviewDialogHeader>
+            <div className="overflow-y-auto max-h-[70vh]">{renderFinalNoticePreview()}</div>
+            <div className="flex justify-end mt-4">
+              <Button onClick={() => setShowPreviewFinalNotice(false)}>Close Preview</Button>
+            </div>
+          </PreviewDialogContent>
+        </PreviewDialog>
       </div>
     );
   };
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Confirm Conditional Offer</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  id="offer-yes"
-                  name="conditional-offer"
-                  checked={hasConditionalOffer === "yes"}
-                  onChange={() => setHasConditionalOffer("yes")}
-                  className="h-5 w-5 appearance-none rounded-full border-2 border-gray-400 bg-white checked:bg-cinnabar checked:border-cinnabar checked:ring-0 checked:ring-offset-0 focus:ring-0 focus:ring-offset-0 transition
-                    before:content-[''] before:block before:w-3 before:h-3 before:rounded-full before:mx-auto before:my-auto before:bg-cinnabar before:opacity-0 checked:before:opacity-100"
-                  style={{
-                    boxShadow: "none",
-                    outline: "none",
-                    position: "relative",
-                  }}
-                />
-                <label htmlFor="offer-yes" className="text-base font-poppins font-normal">Yes, a conditional offer has been extended</label>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  id="offer-no"
-                  name="conditional-offer"
-                  checked={hasConditionalOffer === "no"}
-                  onChange={() => setHasConditionalOffer("no")}
-                  className="h-5 w-5 appearance-none rounded-full border-2 border-gray-400 bg-white checked:bg-cinnabar checked:border-cinnabar checked:ring-0 checked:ring-offset-0 focus:ring-0 focus:ring-offset-0 transition
-                    before:content-[''] before:block before:w-3 before:h-3 before:rounded-full before:mx-auto before:my-auto before:bg-cinnabar before:opacity-0 checked:before:opacity-100"
-                  style={{
-                    boxShadow: "none",
-                    outline: "none",
-                    position: "relative",
-                  }}
-                />
-                <label htmlFor="offer-no" className="text-base font-poppins font-normal">No, a conditional offer has not been extended</label>
-              </div>
-            </div>
+  // Function to render the preview of the final notice
+  const renderFinalNoticePreview = () => (
+    <div className="max-w-2xl mx-auto bg-white p-8 rounded shadow border">
+      <div className="mb-6">
+        <div className="text-lg font-bold mb-1">Final Notice of Decision</div>
+        <div className="text-sm text-muted-foreground mb-2">Adverse Action Notification</div>
+        <div className="text-xs text-muted-foreground">Date: {new Date().toLocaleDateString()}</div>
+      </div>
+      <div className="mb-6">
+        <p className="mb-2">Dear Candidate,</p>
+        <p className="mb-4">This notice is to inform you of a final decision regarding your employment application. Please review the following information and your rights under the law.</p>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">Conviction(s) Leading to This Decision</div>
+          <div className="text-sm bg-gray-50 border rounded p-2 whitespace-pre-line">{finalNoticeData.assessmentNotes || <span className="italic text-muted-foreground">No details provided.</span>}</div>
+        </div>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">Appeal Process (Reconsideration Request)</div>
+          <div className="text-sm bg-gray-50 border rounded p-2 whitespace-pre-line">{finalNoticeData.reconsiderationProcess || <span className="italic text-muted-foreground">No process provided.</span>}</div>
+        </div>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">Right to File a Complaint with the Commission</div>
+          <ul className="list-disc pl-6 text-sm mb-2">
+            <li><span className="font-semibold">Illinois Department of Human Rights (IDHR):</span> <a href="https://dhr.illinois.gov/" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">https://dhr.illinois.gov/</a> | (312) 814-6200</li>
+            <li><span className="font-semibold">Chicago Commission on Human Relations (CCHR):</span> <a href="https://www.chicago.gov/city/en/depts/cchr.html" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">https://www.chicago.gov/city/en/depts/cchr.html</a> | (312) 744-4111</li>
+          </ul>
+          <div className="text-xs text-muted-foreground">You may file a complaint if you believe this decision was made in violation of your rights under state or local law.</div>
+        </div>
+        {taggedSupervisors && taggedSupervisors.length > 0 && (
+          <div className="mb-4">
+            <div className="font-semibold mb-1">Supervisor(s) Tagged for Review</div>
+            <ul className="list-disc pl-6 text-sm">
+              {taggedSupervisors.map(email => (
+                <li key={email}>{email}</li>
+              ))}
+            </ul>
           </div>
-        );
+        )}
+        <div className="mt-8 text-sm text-muted-foreground">If you have any questions, please contact our HR department.</div>
+      </div>
+      <div className="mt-8 text-right text-xs text-muted-foreground">This is a system-generated notice.</div>
+    </div>
+  );
 
-      case 2:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Validate Document Basis</h2>
-            <p className="text-muted-foreground">
-              Review the following criteria to ensure only legally permissible information is considered.
-            </p>
-            <div className="space-y-6">
-              {/* Checklist Item 1 */}
-              <div className="flex items-center gap-4">
-                <Checkbox
-                  id="old"
-                  checked={documentValidation.isOld}
-                  onCheckedChange={(checked) =>
-                    setDocumentValidation(prev => ({ ...prev, isOld: checked as boolean }))
-                  }
-                  className="h-6 w-6 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:text-green-500 focus:ring-0 focus:ring-offset-0 transition"
-                  style={{ borderColor: "#d1d5db" }}
-                />
-                <div>
-                  <div className="text-base font-bold font-poppins leading-tight">
-                    Is the conviction more than 7 years old?
-                  </div>
-                  <div className="text-base font-normal font-poppins text-muted-foreground mt-1">
-                    Unless supervising minors/dependent adults, convictions older than 7 years cannot be considered.
-                  </div>
-                </div>
-              </div>
-              {/* Checklist Item 2 */}
-              <div className="flex items-center gap-4">
-                <Checkbox
-                  id="juvenile"
-                  checked={documentValidation.isJuvenile}
-                  onCheckedChange={(checked) =>
-                    setDocumentValidation(prev => ({ ...prev, isJuvenile: checked as boolean }))
-                  }
-                  className="h-6 w-6 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:text-green-500 focus:ring-0 focus:ring-offset-0 transition"
-                  style={{ borderColor: "#d1d5db" }}
-                />
-                <div>
-                  <div className="text-base font-bold font-poppins leading-tight">
-                    Is the offense juvenile-related?
-                  </div>
-                  <div className="text-base font-normal font-poppins text-muted-foreground mt-1">
-                    Juvenile records cannot be considered in employment decisions.
-                  </div>
-                </div>
-              </div>
-              {/* Checklist Item 3 */}
-              <div className="flex items-center gap-4">
-                <Checkbox
-                  id="decriminalized"
-                  checked={documentValidation.isDecriminalized}
-                  onCheckedChange={(checked) =>
-                    setDocumentValidation(prev => ({ ...prev, isDecriminalized: checked as boolean }))
-                  }
-                  className="h-6 w-6 border-2 border-gray-300 bg-white data-[state=checked]:bg-white data-[state=checked]:text-green-500 focus:ring-0 focus:ring-offset-0 transition"
-                  style={{ borderColor: "#d1d5db" }}
-                />
-                <div>
-                  <div className="text-base font-bold font-poppins leading-tight">
-                    Is the conduct now decriminalized?
-                  </div>
-                  <div className="text-base font-normal font-poppins text-muted-foreground mt-1">
-                    Decriminalized conduct (e.g., cannabis-related) cannot be considered.
-                  </div>
-                </div>
-              </div>
-            </div>
+  // Styled preview of the notice letter
+  const renderNoticePreview = () => (
+    <div className="max-w-2xl mx-auto bg-white p-8 rounded shadow border">
+      <div className="mb-6">
+        <div className="text-lg font-bold mb-1">Notice of Preliminary Decision</div>
+        <div className="text-sm text-muted-foreground mb-2">Pre-Adverse Action Notice</div>
+        <div className="text-xs text-muted-foreground">Date: {new Date().toLocaleDateString()}</div>
+      </div>
+      <div className="mb-6">
+        <div className="mb-2"><span className="font-semibold">To:</span> {noticeData.applicantName || <span className="italic text-muted-foreground">[Candidate Name]</span>}</div>
+        <div className="mb-2"><span className="font-semibold">Position:</span> {noticeData.position || <span className="italic text-muted-foreground">[Position Title]</span>}</div>
+      </div>
+      <div className="mb-6">
+        <p className="mb-2">Dear Candidate,</p>
+        <p className="mb-4">This notice is to inform you of a preliminary decision regarding your employment application. Please review the following information and your rights under the law.</p>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">1. Conviction Record/History Report</div>
+          <div className="flex items-center gap-2 mb-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-cinnabar" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 108.485 8.486L20.5 13" /></svg>
+            <span className="text-sm text-cinnabar font-medium">Background_Check_Summary_Jacobi_Iverson.pdf</span>
+            <span className="text-xs text-muted-foreground ml-2">(Background report attached)</span>
           </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Direct Job-Relation Inquiry</h2>
-            <RadioGroup
-              value={jobRelation.isRelated === null ? "" : jobRelation.isRelated.toString()}
-              onValueChange={(value) => setJobRelation(prev => ({ ...prev, isRelated: value === "true" }))}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="true" id="related-yes" />
-                  <Label htmlFor="related-yes">Yes, the conviction is directly related to job duties</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="false" id="related-no" />
-                  <Label htmlFor="related-no">No, the conviction is not directly related</Label>
-                </div>
-              </div>
-            </RadioGroup>
-
-            {jobRelation.isRelated && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Select Related Job Duties</Label>
-                  <Select
-                    value={jobRelation.duties[0]}
-                    onValueChange={(value) => setJobRelation(prev => ({ ...prev, duties: [value] }))}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Choose a job duty" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="financial">Financial Management</SelectItem>
-                      <SelectItem value="sensitive">Access to Sensitive Data</SelectItem>
-                      <SelectItem value="supervision">Supervision of Others</SelectItem>
-                      <SelectItem value="security">Security Responsibilities</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Explain the Direct Relationship</Label>
-                  <Textarea
-                    value={jobRelation.explanation}
-                    onChange={(e) => setJobRelation(prev => ({ ...prev, explanation: e.target.value }))}
-                    placeholder="Describe how the conviction directly relates to job responsibilities..."
-                  />
-                </div>
-              </div>
+          <div className="text-sm bg-gray-50 border rounded p-2 whitespace-pre-line">{noticeData.convictions || <span className="italic text-muted-foreground">No additional notes provided.</span>}</div>
+        </div>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">2. The Disqualifying Conviction(s) and Explanation</div>
+          <div className="text-sm bg-gray-50 border rounded p-2 whitespace-pre-line">
+            {noticeData.selectedExceptions && noticeData.selectedExceptions.length > 0 ? (
+              <ul className="list-disc pl-5">
+                {noticeData.selectedExceptions.map((ex, i) => (
+                  <li key={i}>{ex}</li>
+                ))}
+              </ul>
+            ) : (
+              <span className="italic text-muted-foreground">No exception selected.</span>
+            )}
+            {noticeData.exceptionExplanation && (
+              <div className="mt-2">{noticeData.exceptionExplanation}</div>
             )}
           </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Time Elapsed Analysis</h2>
-            <Select
-              value={timeElapsed}
-              onValueChange={setTimeElapsed}
-            >
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Select time elapsed since offense" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="less-than-1">Less than 1 year</SelectItem>
-                <SelectItem value="1-3">1-3 years</SelectItem>
-                <SelectItem value="3-7">3-7 years</SelectItem>
-                <SelectItem value="more-than-7">More than 7 years</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Evidence of Rehabilitation</h2>
-            <RadioGroup
-              value={rehabilitation.hasEvidence === null ? "" : rehabilitation.hasEvidence.toString()}
-              onValueChange={(value) => setRehabilitation(prev => ({ ...prev, hasEvidence: value === "true" }))}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="true" id="evidence-yes" />
-                  <Label htmlFor="evidence-yes">Yes, evidence was provided</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="false" id="evidence-no" />
-                  <Label htmlFor="evidence-no">No evidence was provided</Label>
-                </div>
-              </div>
-            </RadioGroup>
-
-            <div>
-              <Label>Rehabilitation Notes</Label>
-              <Textarea
-                value={rehabilitation.notes}
-                onChange={(e) => setRehabilitation(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Document any evidence of rehabilitation or mitigating factors..."
-              />
-            </div>
-          </div>
-        );
-
-      case 6:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Assessment Summary</h2>
-            <div className="space-y-4">
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold mb-2">Job-relatedness</h3>
-                <p>{jobRelation.isRelated ? "Directly related" : "Not directly related"}</p>
-                {jobRelation.isRelated && (
-                  <>
-                    <p className="text-sm text-muted-foreground mt-2">Related duties:</p>
-                    <ul className="list-disc pl-5">
-                      {jobRelation.duties.map(duty => (
-                        <li key={duty}>{duty}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </div>
-
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold mb-2">Time Elapsed</h3>
-                <p>{timeElapsed.replace("-", " to ")}</p>
-              </div>
-
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold mb-2">Rehabilitation Evidence</h3>
-                <p>{rehabilitation.hasEvidence ? "Evidence provided" : "No evidence provided"}</p>
-                {rehabilitation.notes && (
-                  <p className="text-sm text-muted-foreground mt-2">{rehabilitation.notes}</p>
-                )}
-              </div>
-
-              <div className="flex items-start space-x-3 mt-6">
-                <Checkbox
-                  id="certification"
-                  checked={certificationChecked}
-                  onCheckedChange={(checked) => setCertificationChecked(checked as boolean)}
-                />
-                <Label htmlFor="certification" className="text-sm">
-                  I certify that this decision complies with the Fair Chance Ordinance and is based solely on legally permissible information.
-                </Label>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 7:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Candidate Notification</h2>
-            <div className="rounded-lg border p-4 bg-muted">
-              <h3 className="font-semibold mb-2">Notice of Intent to Take Adverse Action</h3>
-              <p className="text-sm text-muted-foreground">
-                You must give the candidate 7 days to respond before proceeding with any adverse action. During this time, no hiring decision may be finalized.
-              </p>
-            </div>
-            <Button
-              onClick={() => setShowNoticeDialog(true)}
-            >
-              Preview & Send Notice
-            </Button>
-          </div>
-        );
-
-      case 8:
-        if (showWOTCSigningScreen) {
-          return (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold">WOTC Tax Credit Details</h2>
-              
-              <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
-                <h3 className="text-xl font-semibold text-green-800 dark:text-green-300 mb-2">
-                  Tax Credit Value
-                </h3>
-                <p className="text-green-700 dark:text-green-400 text-lg">
-                  You are eligible for <span className="font-bold">40% of first-year wages</span> (up to $6,000) if the person works at least 400 hours as part of a WOTC targeted group.
-                </p>
-              </div>
-
-              <Card className="p-6 bg-secondary">
-                <div className="flex items-start gap-3">
-                  <Info className="h-5 w-5 mt-1 flex-shrink-0" />
-                  <div className="space-y-3">
-                    <h4 className="font-semibold">Policy Information</h4>
-                    <p className="text-sm text-muted-foreground">
-                      The Work Opportunity Tax Credit (WOTC) is a federal tax credit available to employers who invest in American job seekers who have consistently faced barriers to employment. Employers may meet their business needs and claim a tax credit if they hire an individual who is in a WOTC targeted group.
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Employers must apply for and receive a certification verifying the new hire is a member of a targeted group before they can claim the tax credit. After the required certification is secured, taxable employers claim the WOTC as a general business credit against their income taxes, and tax-exempt employers claim the WOTC against their payroll taxes.
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      WOTC is authorized until December 31, 2025 (Section 113 of Division EE of P.L. 116-260 -- Consolidated Appropriations Act, 2021).
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <div className="flex justify-end mt-6">
-                <Button onClick={handleSignAndSend}>
-                  SIGN & SEND FOR REVIEW
-                </Button>
-              </div>
-            </div>
-          );
-        }
-
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Final Decision</h2>
-            <div className="space-y-4">
-              <Textarea
-                placeholder="Provide final justification for the hiring decision..."
-              />
-              <div className="flex gap-4">
-                <Button 
-                  variant="outline" 
-                  className="flex-1 ia-button-outline px-5 py-2 rounded-md text-base font-poppins"
-                  onClick={handleProceedWithHire}
-                >
-                  Proceed with Hire
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  className="flex-1 ia-button-primary bg-cinnabar text-white hover:bg-cinnabar-600 px-5 py-2 rounded-md text-base font-poppins"
-                  onClick={() => setShowFinalNoticeDialog(true)}
-                >
-                  Take Adverse Action
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+        </div>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">3. Applicant's Right to Respond</div>
+          <ul className="list-disc pl-6 text-sm mb-2">
+            <li>Challenge the accuracy of the conviction record</li>
+            <li>Provide evidence of rehabilitation or mitigation</li>
+            <li>Submit any other information you wish us to consider</li>
+          </ul>
+        </div>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">4. Response Deadlines</div>
+          <ul className="list-disc pl-6 text-sm">
+            <li><span className="font-semibold">Chicago HRO & IHRA:</span> 5 business days to respond</li>
+            <li><span className="font-semibold">EBFA:</span> 7 calendar days to respond</li>
+          </ul>
+          <div className="text-xs text-muted-foreground mt-1">No final adverse action will be taken until the applicable response period has passed.</div>
+        </div>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">5. EBFA Compliance Notice</div>
+          <div className="text-sm">As required by the Employee Background Fairness Act (EBFA), we will notify you before or when filling the position if you are not selected for this role.</div>
+        </div>
+        <div className="mt-8 text-sm text-muted-foreground">If you have any questions, please contact our HR department.</div>
+      </div>
+      <div className="mt-8 text-right text-xs text-muted-foreground">This is a system-generated notice.</div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -1593,16 +1628,9 @@ export default function AssessmentEvaluate() {
           <div className="flex justify-end gap-3 mt-4">
             <Button
               variant="outline"
-              onClick={() => setIsEditingNotice(!isEditingNotice)}
+              onClick={() => setShowPreviewNotice(true)}
             >
-              {isEditingNotice ? (
-                <>Preview Notice</>
-              ) : (
-                <>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Notice
-                </>
-              )}
+              Preview Notice
             </Button>
             <Button
               className="ia-button-primary bg-cinnabar text-white hover:bg-cinnabar-600"
@@ -1622,6 +1650,19 @@ export default function AssessmentEvaluate() {
         </DialogContent>
       </Dialog>
 
+      {/* Preview Notice Modal */}
+      <PreviewDialog open={showPreviewNotice} onOpenChange={setShowPreviewNotice}>
+        <PreviewDialogContent className="max-w-3xl">
+          <PreviewDialogHeader>
+            <PreviewDialogTitle>Preview: Candidate Notice Letter</PreviewDialogTitle>
+          </PreviewDialogHeader>
+          <div className="overflow-y-auto max-h-[70vh]">{renderNoticePreview()}</div>
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setShowPreviewNotice(false)}>Close Preview</Button>
+          </div>
+        </PreviewDialogContent>
+      </PreviewDialog>
+
       <Dialog open={showFinalNoticeDialog} onOpenChange={setShowFinalNoticeDialog}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
@@ -1632,36 +1673,6 @@ export default function AssessmentEvaluate() {
           </DialogHeader>
           
           {renderFinalNoticeContent()}
-
-          <div className="flex justify-end gap-3 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsEditingFinalNotice(!isEditingFinalNotice)}
-            >
-              {isEditingFinalNotice ? (
-                <>Preview Notice</>
-              ) : (
-                <>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Notice
-                </>
-              )}
-            </Button>
-            <Button
-              className="ia-button-primary bg-cinnabar text-white hover:bg-cinnabar-600"
-              onClick={() => {
-                toast({
-                  title: "Final Notice Sent",
-                  description: "The final notice has been sent to the candidate.",
-                });
-                setShowFinalNoticeDialog(false);
-                setShowCompleteModal(true);
-              }}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Send Final Notice
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -1708,11 +1719,17 @@ export default function AssessmentEvaluate() {
           <DialogHeader>
             <DialogTitle>Compliance Acknowledgment</DialogTitle>
             <DialogDescription className="space-y-4">
-              <p className="text-sm">
-                SEC. 4909. IMPLEMENTATION AND ENFORCEMENT OF EMPLOYMENT PROVISIONS.
-                (a) Administrative Enforcement.
-                (1) With regard to the employment provisions of this Article 49, the OLSE is authorized to take appropriate steps to enforce this Article and coordinate enforcement, including the investigation of any possible violations of this Article. Where the OLSE has reason to believe that a violation has occurred, it may order any appropriate temporary or interim relief to mitigate the violation or maintain the status quo pending completion of a full investigation or hearing. The OLSE shall not find a violation based on an Employer's decision that an applicant or employee's Conviction History is Directly Related, but otherwise may find a violation of this Article, including if the Employer failed to conduct the individualized assessment as required under Section 4904(f).
-              </p>
+              {/* Removed long legal text per user request */}
+              <div className="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded space-y-2 mt-4">
+                <div className="font-semibold text-yellow-900 mb-2">Important Compliance Notice</div>
+                <ul className="list-disc pl-6 text-sm text-yellow-900 space-y-1">
+                  <li><span className="font-bold">Investigation by the Commission:</span> The Commission may investigate any alleged violations of this ordinance.</li>
+                  <li><span className="font-bold">Penalties:</span> Unless another fine or penalty is specifically provided in this Code, any person who violates this ordinance as determined by this Commission shall be fined not less than <span className="font-bold">$5,000</span> and not more than <span className="font-bold">$10,000</span> for each offense.</li>
+                  <li><span className="font-bold">License Discipline:</span> Violations may result in discipline or revocation of business or professional licenses.</li>
+                  <li><span className="font-bold">Each New Day = New Offense:</span> Each new day that a violation continues shall constitute a separate and distinct offense.</li>
+                  <li><span className="font-bold">Ongoing Violations:</span> Every day that a violation shall continue shall constitute a separate and distinct offense.</li>
+                </ul>
+              </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="compliance"
@@ -1863,6 +1880,35 @@ export default function AssessmentEvaluate() {
             <Button onClick={() => { setShowWOTCCongratsModal(false); router.push("/"); }}>
               Close
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showExceptionModal} onOpenChange={setShowExceptionModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>FOUR EXCEPTIONS</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-base">
+            {exceptionOptions.map((option, idx) => (
+              <div key={idx} className="flex items-start gap-2">
+                <Checkbox
+                  id={`exception-${idx}`}
+                  checked={selectedExceptions.includes(option)}
+                  onCheckedChange={(checked) => {
+                    setSelectedExceptions(prev =>
+                      checked ? [...prev, option] : prev.filter(o => o !== option)
+                    );
+                  }}
+                />
+                <label htmlFor={`exception-${idx}`} className="text-sm cursor-pointer select-none">
+                  {option}
+                </label>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowExceptionModal(false)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
